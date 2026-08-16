@@ -153,7 +153,7 @@ export let world = {
                 {id : "guy", image: "man", imageData : {x:600, y:500,width:150, height:150},collisionData: {x:0,y:0,width:150,height:150}, interaction: {dialogue : "aiden"}},
                 {id : "wom", image: "woman", imageData : {x:800, y:500,width:150, height:150},collisionData: {x:0,y:0,width:130,height:150}, interaction: {dialogue : "textTester"}},
                 {id : "lamp", image:"cornball",imageData: {x:400,y:800,width: 100,height:150},collisionData: {x:0,y:0,width:100,height:150},brightness:0.4,lightColor:"rgb(234,48,31)",lightRadius:200},
-                {id : "lamp", image:"lampPost",imageData: {x:900,y:800,width: 100,height:150},collisionData: {x:0,y:0,width:100,height:150},brightness:0.3,lightColor:"rgb(255,255,255)",lightRadius:200,lightFlicker:true},
+                {id : "lamp", image:"lampPost",imageData: {x:900,y:800,width: 100,height:150},collisionData: {x:0,y:0,width:100,height:150},brightness:0.3,lightColor:"rgb(255,255,255)",lightRadius:400,lightFlicker:true},
             ],
             Next: {
                 Right : "Woodrock_Southern_Entrance",

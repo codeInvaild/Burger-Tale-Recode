@@ -42,11 +42,13 @@ import {gameWidth} from "./main.js";
 // }
 
 export let questionHandler = {
-    boxWidth:300,
-    boxBaseHeight:100,
+    boxWidth:500,
+    boxBaseHeight:50,
     boxStartingY: 400,
-    boxYSpacing:150,
-    boxX:(1920/2) + (300/2),
+    boxYSpacing:60,
+    boxX:(1920/2) - (500/2),
+    
+    selectionBoxSize : 25,
 
     textSize:25,
 
@@ -83,9 +85,13 @@ export let questionHandler = {
     draw(){
         for (let choiceIndex=0; choiceIndex<this.choices.length;choiceIndex++) {
             //precompute box height based on the word wrapping
-
+            newRect("bg",this.boxX-5,this.boxStartingY + (choiceIndex*this.boxYSpacing)-5,this.boxWidth+10,this.boxBaseHeight+10,"rgb(0,0,0)").draw();
             newRect("bg",this.boxX,this.boxStartingY + (choiceIndex*this.boxYSpacing),this.boxWidth,this.boxBaseHeight,this.selectionIndex === choiceIndex ? this.selectColor : this.baseColor).draw();
-            newFilledText("textForAnswers",this.boxX,this.boxStartingY + (choiceIndex*this.boxYSpacing),"rgb(255,255,255)",this.textSize+"px JetBrains Mono ExtraBold",this.choices[choiceIndex].text).draw();
+            newFilledText("textForAnswers",this.boxX,this.boxStartingY + (choiceIndex*this.boxYSpacing) + this.textSize,"rgb(255,255,255)",this.textSize+"px JetBrains Mono ExtraBold",this.choices[choiceIndex].text).draw();
+            if (this.selectionIndex === choiceIndex) {
+                newRect("bg",this.boxX- (2*this.selectionBoxSize)-5,this.boxStartingY + (choiceIndex*this.boxYSpacing) + (this.selectionBoxSize/2)-5,this.selectionBoxSize+10,this.selectionBoxSize+10,"rgb(0 0 0)").draw();
+                newRect("bg",this.boxX- (2*this.selectionBoxSize),this.boxStartingY + (choiceIndex*this.boxYSpacing) + (this.selectionBoxSize/2),this.selectionBoxSize,this.selectionBoxSize,"rgb(255,255,255)").draw();
+            }
         }
     },
 
@@ -112,8 +118,8 @@ export let dialogue = {
 
     dialoguePresent : false,
 
-    x : 200,
-    y : 500,
+    x : 1920/2 - 400,
+    y : 700,
     width : 800,
     height : 200,
     dialogueIndex : -1,
@@ -270,11 +276,36 @@ export let dialogue = {
 
         if (this.precomputedText.length-1 === this.characterIndex) {this.textFinished = true;}
     },
+    
+    setup(options={}) {//setup with no params defaults to the worldHandler configuration
+        const {
+            backgroundBox = true,
+            x =1920/2 - 400,
+            y = 700,
+            width = 800,
+            height = 200,
+
+            boxWidth=500,
+            boxBaseHeight=50,
+            boxStartingY=400,
+            boxX=(1920/2) - (500/2),
+        } = options
+        
+        this.backgroundBox = backgroundBox
+        this.x = x
+        this.y = y
+        this.width = width
+        this.height = height
+        
+        questionHandler.boxWidth = boxWidth
+        questionHandler.boxBaseHeight=boxBaseHeight
+        questionHandler.boxStartingY=boxStartingY
+        questionHandler.boxX=boxX
+    },
 
     draw(){
         if (!this.active) {return}
-        newRect("dialogueBoxBG",dialogue.x - this.characterSize, dialogue.y - this.characterSize,dialogue.width + this.characterSize,dialogue.height + this.characterSize,"rgb(80,80,80)").draw();
-
+        if (this.backgroundBox) newRect("dialogueBoxBG",dialogue.x - this.characterSize, dialogue.y - this.characterSize,dialogue.width + this.characterSize,dialogue.height + this.characterSize,"rgb(80,80,80)").draw();
 
 
         if (!this.textFinished) {
