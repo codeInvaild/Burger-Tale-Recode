@@ -22,6 +22,15 @@ export const itemDirectory = {//USABLE ITEMS IN A BATTLE
         description:"Eating this by itself should be considered criminal. Heals for 10 hp",
         image:"ketchup",
         sound:"nutella",
+    },
+
+    "apple" : {
+        type:"heal",
+        targetType:"allies",
+        heal:5,
+        description:"A crisp fruit! Heals for 10 hp",
+        image:"apple",
+        sound:"heyApple",
     }
 
 

@@ -35,6 +35,7 @@ export const assets = {
         man2: "Assets/images/man2.png",
         chillGuy: "Assets/images/chillGuy.png",
         shop:"Assets/images/shop.png",
+        apple: "Assets/images/apple.png",
     },
     music : { //WE CAN ONLY ACCEPT MP3s
         //please note all of the music right now is temporary and should be removed later
@@ -62,6 +63,7 @@ export const assets = {
         Male_4:"Assets/sounds/Male_4.mp3",
         OO_Talk: "Assets/sounds/OO_Talk.mp3",
         OO_Hurt: "Assets/sounds/OO_Hurt.mp3",
+        heyApple: "Assets/sounds/heyApple.mp3",
         OO_Miss: "Assets/sounds/OO_Miss.mp3",
         OO_Dodge: "Assets/sounds/OO_Dodge.mp3",
         back:"Assets/sounds/back.mp3",

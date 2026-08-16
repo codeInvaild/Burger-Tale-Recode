@@ -15,6 +15,7 @@ export let shopHandler = {
 
         newRect("id", 800, 600, 700, 400, "rgb(255,255,255)").draw();
         
+        //draw said character and background first, they will be covered by the UI
 
 
 
