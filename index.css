@@ -18,3 +18,31 @@
     font-weight: bold;
     transition: background-color 0.3s ease, transform 0.2s ease; /* Smooth hover effect */
 }
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* kills the scrollbars entirely */
+    background: black; /* letterbox color if aspect ratios don't match */
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+canvas {
+    /* scale to fit the viewport while preserving aspect ratio */
+    max-width: 100vw;
+    max-height: 100vh;
+    width: auto;
+    height: auto;
+    image-rendering: pixelated; /* optional: keeps pixel art crisp when scaled */
+}
