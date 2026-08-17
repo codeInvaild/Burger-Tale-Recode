@@ -17,6 +17,17 @@ export let shopHandler = {
         
         //draw said character and background first, they will be covered by the UI
 
+        //draw base layer things like dialogueBox and shop menu
+        newRect("Aaa",50,700,997,358,"rgb(87,87,87)").draw();
+        newRect("id2",1070,20,800,800,"rgb(87,87,87)").draw();
+        newRect("bg",1070,837,800,100,"rgb(87,87,87)").draw();
+        newRect("bg2",1070,951,800,100,"rgb(87,87,87)").draw();
+
+
+        //grid tile placeholder (coordinate 1,1)
+        //newRect("...",1090,140,175,175,"rgb(200,0,0)").draw();
+        //scale using a multiplier of 175 + 20 as the X and Y buffers
+        //cap out at the 4th Y position
 
 
 

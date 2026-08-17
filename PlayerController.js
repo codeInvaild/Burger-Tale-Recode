@@ -9,6 +9,7 @@ import {world,location} from "./WorldHandler.js"
 import {shopHandler} from "./shopHandler.js";
 import {changeGameState} from "./main.js";
 import {shopDirectory} from "./shopDirectory.js";
+import {dialogueDirectory} from "./dialogueDirectory.js";
 
 export let playerController = {//this handles the player within the world and moving them with the desired keybinds
     image : "cobalt",
@@ -66,6 +67,11 @@ export let playerController = {//this handles the player within the world and mo
                     case "dialogue":
                         this.state = "dialogue";
                         dialogueHandler.resolve(playerController.interaction.Data,true);
+
+                        setTimeout(()=>{
+                            console.log("triggering overlap")
+                            dialogueHandler.resolve("aiden",true,{overlap:true});
+                        },1500);
                         break;
                     case "battle":
                         this.state = "battle";

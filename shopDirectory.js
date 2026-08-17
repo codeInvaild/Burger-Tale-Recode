@@ -2,8 +2,8 @@ export const shopDirectory = {
     guy: {
 
         visuals:[
-
-        ]
+            {x:0,y:0,width:1920,height:1080,image:"shop1"},
+        ],
 
         items: [
             {
@@ -46,6 +46,14 @@ export const shopDirectory = {
         gear:[
 
         ],
+
+        dialogue:{
+            entrance:[
+                {
+                    text:"Hey, welcome in. Do me a favor and buy something, yeah?"
+                }
+            ],
+        },
 
 
 

@@ -7,6 +7,7 @@ import {availableAssets} from "./AssetLoader.js";
 import {battle} from "./BattleHandler.js";
 import {world} from "./WorldHandler.js";
 import {gameWidth} from "./main.js";
+import {shopDirectory} from "./shopDirectory.js";
 
 //what does this do?
 /*
@@ -141,6 +142,10 @@ export let dialogue = {
     punctuationComma : 400,
     textSpeed : 50,
     playerInteract : false,
+
+    playerContinue:true,
+
+    directory:dialogueDirectory,
 
     //local dialogue stats
     name : "",
@@ -384,91 +389,183 @@ export let dialogue = {
     },
 
     //you should run this, not the update function. This lets us know which dialogue to use
-    resolve : function (dialogueName,startingIndex = false) {
+    resolve : function (dialogueName,startingIndex = false, options={}) {
+        const {
+            directoryType="dialogueDirectory",
+            specificKey=null,
+            playerContinue=true,
+            overlap=false,
+            //oneshots do not expect input
+            shopOneshot=false,
+            oneshot=false,
+        } = options
+        this.playerContinue=playerContinue;
         this.active = true;
         dialogue.resolving = true;
-        if (dialogue.dialoguePresent) {return}
+        if (dialogue.dialoguePresent && !overlap) {return}
         dialogue.dialoguePresent = true;
         questionHandler.choices = [];
 
-        if (!dialogueDirectory[dialogueName]) {Error("dialogue directory not found.");} else if (dialogueDirectory[dialogueName]?.normal === null) {Error("You did not supply a normal (default) for this dialogue: "+dialogueName)}
-        dialogue.name = dialogueName;
-        //figure out if something is occupying it
-       for (let i = 0; i < Object.keys(dialogueDirectory[dialogueName]).length; i++) {
-           const identifier = Object.keys(dialogueDirectory[dialogueName])[i];
-           if (identifier.split("-")[0] === "STORY") {//Main story specific things
-               //execute special code or smth
-           } else if (identifier.split("-")[0] !== "STORY" && identifier.split("-")[0] !== "normal") {//checking if we have other quests besides the story
-               //push this into a quest array
-           } else if (identifier.split("-")[0] === "normal") {
-               dialogue.dialogueIndex= startingIndex ? 0 : dialogue.dialogueIndex;
-               let dialogueInst = dialogueDirectory[dialogueName][identifier][dialogue.dialogueIndex];
-               let canDo = true;
-               if (dialogueInst?.condition) {
-                   if (playerData.internalData[dialogueInst?.condition.check[0]] === dialogueInst?.condition.check[1]) {
-                       canDo = false;
-                       console.log("resolving condition because TRUE")
-                       dialogue.resolving = false
-                       dialogue.dialoguePresent = false;
-                       this.active = false;
-                       dialogue.resolve(dialogueInst?.condition.ifTrue,true);
-                       return;
-                   } else {
-                       if (Object.keys(dialogueInst).length <2) {
-                           this.active = false;
-                           dialogue.dialogueIndex = -1;
-                           dialogue.textFinished = false;
-                           this.playerInteract = false;
-                           dialogue.dialoguePresent = false;
-                           dialogue.selectedData = {who:"nobody",textIdentifier:"none"};
-                           playerController.state = "active";
-                           dialogue.localElapsedTime = 0;
-                           dialogue.characterIndex = 0;
-                           dialogue.precomputedText = [];
-                       }
-                   }
-               }
+        console.log("hi");
+        if (overlap) {
+            dialogue.dialogueIndex = -1;
+            dialogue.textFinished = false;
+            dialogue.localElapsedTime = 0;
+            dialogue.characterIndex = 0;
+            dialogue.precomputedText = [];
+        }
 
-               if (canDo) {
-                   if (dialogueInst?.choices) {
-                       questionHandler.satisfied = false;
-                       questionHandler.append(dialogueInst.choices);
-                   }
 
-                   if (dialogueInst?.writeTo) {
-                       playerData.internalData[dialogueInst?.writeTo[0]] = dialogueInst?.writeTo[1];
-                       if (Object.keys(dialogueInst).length < 2) {
-                           dialogue.textFinished = false;
-                           this.dialogueIndex++;
-                           dialogue.dialoguePresent = false;
-                           dialogue.localElapsedTime = 0;
-                           dialogue.precomputedText = [];
-                           dialogue.characterIndex = 0;
-                           dialogue.resolve(dialogue.name);
-                       }
-                   }
+        if (directoryType === "dialogueDirectory") {
+            if (!dialogueDirectory[dialogueName]) {Error("dialogue directory not found.");} else if (dialogueDirectory[dialogueName]?.normal === null) {Error("You did not supply a normal (default) for this dialogue: "+dialogueName)}
+            dialogue.name = dialogueName;
+            this.directory = dialogueDirectory
+            //figure out if something is occupying it
 
-                   if (dialogueInst?.battle) {
-                       //trigger battle mechanics by loading it into the player controller
-                       this.dialoguePresent=false;
-                       dialogue.name = "";
-                       playerController.state = "battle";
-                       //battle start needs correct parameters
-                       console.log(dialogueInst.battle)
-                       battle.start(dialogueInst.battle.enemies,world.currentLocation, dialogueInst.battle.backgroundData);
-                   } else if (dialogueInst?.text) {
-                       this.precomputeWordWrapping(dialogueInst?.text)
-                       dialogue.selectedData = {who:dialogueName, textIdentifier:identifier,
-                           voice:dialogueDirectory[dialogueName][identifier][dialogue.dialogueIndex]?.voice ? dialogueDirectory[dialogueName][identifier][dialogue.dialogueIndex]?.voice : "OO_Talk"
-                       };
-                   }
-               }
+            for (let i = 0; i < Object.keys(dialogueDirectory[dialogueName]).length; i++) {
+                const identifier = Object.keys(dialogueDirectory[dialogueName])[i];
+                if (identifier.split("-")[0] === "STORY") {//Main story specific things
+                    //execute special code or smth
+                } else if (identifier.split("-")[0] !== "STORY" && identifier.split("-")[0] !== "normal") {//checking if we have other quests besides the story
+                    //push this into a quest array
+                } else if (identifier.split("-")[0] === "normal") {
+                    dialogue.dialogueIndex= startingIndex ? 0 : dialogue.dialogueIndex;
+                    let dialogueInst = dialogueDirectory[dialogueName][identifier][dialogue.dialogueIndex];
+                    let canDo = true;
+                    if (dialogueInst?.condition) {
+                        if (playerData.internalData[dialogueInst?.condition.check[0]] === dialogueInst?.condition.check[1]) {
+                            canDo = false;
+                            console.log("resolving condition because TRUE")
+                            dialogue.resolving = false
+                            dialogue.dialoguePresent = false;
+                            this.active = false;
+                            dialogue.resolve(dialogueInst?.condition.ifTrue,true);
+                            return;
+                        } else {
+                            if (Object.keys(dialogueInst).length <2) {
+                                this.active = false;
+                                dialogue.dialogueIndex = -1;
+                                dialogue.textFinished = false;
+                                this.playerInteract = false;
+                                dialogue.dialoguePresent = false;
+                                dialogue.selectedData = {who:"nobody",textIdentifier:"none"};
+                                playerController.state = "active";
+                                dialogue.localElapsedTime = 0;
+                                dialogue.characterIndex = 0;
+                                dialogue.precomputedText = [];
+                            }
+                        }
+                    }
 
-               break;
-           } else {
-               dialogue.dialogueIndex=-1;
-               break;
-           }
-       }
+                    if (canDo) {
+                        if (dialogueInst?.choices) {
+                            questionHandler.satisfied = false;
+                            questionHandler.append(dialogueInst.choices);
+                        }
+
+                        if (dialogueInst?.writeTo) {
+                            playerData.internalData[dialogueInst?.writeTo[0]] = dialogueInst?.writeTo[1];
+                            if (Object.keys(dialogueInst).length < 2) {
+                                dialogue.textFinished = false;
+                                this.dialogueIndex++;
+                                dialogue.dialoguePresent = false;
+                                dialogue.localElapsedTime = 0;
+                                dialogue.precomputedText = [];
+                                dialogue.characterIndex = 0;
+                                dialogue.resolve(dialogue.name);
+                            }
+                        }
+
+                        if (dialogueInst?.battle) {
+                            //trigger battle mechanics by loading it into the player controller
+                            this.dialoguePresent=false;
+                            dialogue.name = "";
+                            playerController.state = "battle";
+                            //battle start needs correct parameters
+                            console.log(dialogueInst.battle)
+                            battle.start(dialogueInst.battle.enemies,world.currentLocation, dialogueInst.battle.backgroundData);
+                        } else if (dialogueInst?.text) {
+                            this.precomputeWordWrapping(dialogueInst?.text)
+                            dialogue.selectedData = {who:dialogueName, textIdentifier:identifier,
+                                voice:dialogueDirectory[dialogueName][identifier][dialogue.dialogueIndex]?.voice ? dialogueDirectory[dialogueName][identifier][dialogue.dialogueIndex]?.voice : "OO_Talk"
+                            };
+                        }
+                    }
+
+                    break;
+                } else {
+                    dialogue.dialogueIndex=-1;
+                    break;
+                }
+            }
+       } else if (directoryType === "shop") {
+            let directory = shopDirectory[specificKey].dialogue;
+
+            for (let i = 0; i < directory[dialogueName].length; i++) {
+                dialogue.dialogueIndex = startingIndex ? 0 : dialogue.dialogueIndex;
+                let dialogueInst = directory[dialogueName][identifier][dialogue.dialogueIndex];
+                let canDo = true;
+                if (dialogueInst?.condition) {
+                    if (playerData.internalData[dialogueInst?.condition.check[0]] === dialogueInst?.condition.check[1]) {
+                        canDo = false;
+                        console.log("resolving condition because TRUE")
+                        dialogue.resolving = false
+                        dialogue.dialoguePresent = false;
+                        this.active = false;
+                        dialogue.resolve(dialogueInst?.condition.ifTrue,true);
+                        return;
+                    } else {
+                        if (Object.keys(dialogueInst).length <2) {
+                            this.active = false;
+                            dialogue.dialogueIndex = -1;
+                            dialogue.textFinished = false;
+                            this.playerInteract = false;
+                            dialogue.dialoguePresent = false;
+                            dialogue.selectedData = {who:"nobody",textIdentifier:"none"};
+                            playerController.state = "active";
+                            dialogue.localElapsedTime = 0;
+                            dialogue.characterIndex = 0;
+                            dialogue.precomputedText = [];
+                        }
+                    }
+                }
+
+                if (canDo) {
+                    if (dialogueInst?.choices) {
+                        questionHandler.satisfied = false;
+                        questionHandler.append(dialogueInst.choices);
+                    }
+
+                    if (dialogueInst?.writeTo) {
+                        playerData.internalData[dialogueInst?.writeTo[0]] = dialogueInst?.writeTo[1];
+                        if (Object.keys(dialogueInst).length < 2) {
+                            dialogue.textFinished = false;
+                            this.dialogueIndex++;
+                            dialogue.dialoguePresent = false;
+                            dialogue.localElapsedTime = 0;
+                            dialogue.precomputedText = [];
+                            dialogue.characterIndex = 0;
+                            dialogue.resolve(dialogue.name);
+                        }
+                    }
+
+                    if (dialogueInst?.battle) {
+                        //trigger battle mechanics by loading it into the player controller
+                        this.dialoguePresent=false;
+                        dialogue.name = "";
+                        playerController.state = "battle";
+                        //battle start needs correct parameters
+                        console.log(dialogueInst.battle)
+                        battle.start(dialogueInst.battle.enemies,world.currentLocation, dialogueInst.battle.backgroundData);
+                    } else if (dialogueInst?.text) {
+                        this.precomputeWordWrapping(dialogueInst?.text)
+                        dialogue.selectedData = {who:dialogueName, textIdentifier:identifier,
+                            voice:dialogueDirectory[dialogueName][identifier][dialogue.dialogueIndex]?.voice ? dialogueDirectory[dialogueName][identifier][dialogue.dialogueIndex]?.voice : "OO_Talk"
+                        };
+                    }
+                }
+                break;
+            }
+        }
     }
 }

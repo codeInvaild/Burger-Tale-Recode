@@ -36,6 +36,7 @@ export const assets = {
         chillGuy: "Assets/images/chillGuy.png",
         shop:"Assets/images/shop.png",
         apple: "Assets/images/apple.png",
+        shopBG1: "Assets/images/shope.jpg",
     },
     music : { //WE CAN ONLY ACCEPT MP3s
         //please note all of the music right now is temporary and should be removed later
