@@ -66,12 +66,19 @@ export let playerController = {//this handles the player within the world and mo
                 switch (playerController.interaction.Type) {
                     case "dialogue":
                         this.state = "dialogue";
-                        dialogueHandler.resolve(playerController.interaction.Data,true);
-
-                        setTimeout(()=>{
-                            console.log("triggering overlap")
-                            dialogueHandler.resolve("aiden",true,{overlap:true});
-                        },1500);
+                        // dialogueHandler.resolve(playerController.interaction.Data,true);
+                        dialogueHandler.resolve({
+                            name:playerController.interaction.Data,
+                            type:"story",
+                        });
+                        // setTimeout(()=>{
+                        //     console.log("triggering overlap")
+                        //     dialogueHandler.resolve({
+                        //         name:"aiden",
+                        //         type:"story",
+                        //         overlap:true,
+                        //     });
+                        // },1500);
                         break;
                     case "battle":
                         this.state = "battle";

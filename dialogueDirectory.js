@@ -4,12 +4,11 @@ export const dialogueDirectory = {
     guy : {
         normal : [
             {
-                speaker: "Guy",
                 text : "What are you doing here?",
+                voice:"Male_1",
             },
             {
-                speaker: "Guy",
-                text : "Perlin noise",
+                text : "@rgb(255,0,0)/wow my text is red @end not so cool",
             },
         ]
     },

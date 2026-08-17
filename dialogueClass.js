@@ -9,38 +9,31 @@ import {world} from "./WorldHandler.js";
 import {gameWidth} from "./main.js";
 import {shopDirectory} from "./shopDirectory.js";
 
-//what does this do?
 /*
-* This script allows the user to create a class that contains dialogue
-* The script itself IS the interpreter
-* We will contain information such as speaker data, text, text modifiers (color, animations, etc...), and even internalData logs that help make it unique
-* the dialogue class below makes it easy to set up and draw from the same instance
-*/
-
-// class rawData {
-//     constructor(a,b,c) {;
-//
-//     }
-// }
-//
-// class dataObject extends rawData {
-//     constructor(a,b,c,d) {
-//         super(a,b,c);
-//     }
-// }
-//
-// class dataInteger extends rawData {
-//
-// }
-
-
-
-// class choice{
-//     constructor(choice,dataToWrite=null){
-//         this.choice = choice;
-//         this.dataToWrite = dataToWrite;
-//     }
-// }
+ * DIALOGUE ENGINE - how this is put together
+ *
+ * The old version had one giant resolve() that both (a) figured out which raw
+ * data to pull from and (b) processed that data (conditions/choices/writeTo/
+ * battle/text). That meant every new *source* of dialogue (shop, oneshots)
+ * needed its own copy of the processing logic pasted in again.
+ *
+ * Now there are three separate jobs:
+ *
+ * 1. LOOKUP  - turns a request ({type:"story"|"shop"|"oneshot", ...}) into a
+ *              flat `sequence` array of raw entries. This is the only part
+ *              that knows dialogueDirectory/shopDirectory's shapes.
+ * 2. APPLY   - given ONE entry from that sequence, does the actual work
+ *              (condition redirect, writeTo, choices, battle trigger, text
+ *              setup). Doesn't know or care where the entry came from.
+ * 3. SESSION - `dialogue.session` tracks {sequence, index, type, name} and
+ *              is what update()/handlePlayerInput() walk through. Completion
+ *              is just "index >= sequence.length" - no more reaching back
+ *              into dialogueDirectory to ask "are we done yet?".
+ *
+ * A single line that shouldn't advance the conversation (shop hover text,
+ * "thanks for buying") is just an entry with oneshot:true - on interact it
+ * closes instead of stepping to session.index + 1.
+ */
 
 export let questionHandler = {
     boxWidth:500,
@@ -48,7 +41,7 @@ export let questionHandler = {
     boxStartingY: 400,
     boxYSpacing:60,
     boxX:(1920/2) - (500/2),
-    
+
     selectionBoxSize : 25,
 
     textSize:25,
@@ -68,12 +61,11 @@ export let questionHandler = {
         } else if (keyPresses[keybinds.Interact] && this.poll) {
             availableAssets.sounds.OO_Click.play();
             let selection = this.choices[this.selectionIndex];
-            if (selection?.writeTo) {
-                playerData.internalData[selection?.writeTo[0]] = selection?.writeTo[1];
-                console.log(playerData.internalData);
-            }
-            this.satisfied=true;
+            this.satisfied = true;
             this.poll = false;
+            // writeTo / goTo / whatever the selection implies now lives in
+            // one place, shared by every dialogue source - see below.
+            dialogue.handleChoiceSelected(selection);
         } else if (keyPresses[keybinds.Left]) {
             availableAssets.sounds.navigation.play();
             if (this.selectionIndex - 1 >-1) {this.selectionIndex--;}
@@ -85,7 +77,6 @@ export let questionHandler = {
 
     draw(){
         for (let choiceIndex=0; choiceIndex<this.choices.length;choiceIndex++) {
-            //precompute box height based on the word wrapping
             newRect("bg",this.boxX-5,this.boxStartingY + (choiceIndex*this.boxYSpacing)-5,this.boxWidth+10,this.boxBaseHeight+10,"rgb(0,0,0)").draw();
             newRect("bg",this.boxX,this.boxStartingY + (choiceIndex*this.boxYSpacing),this.boxWidth,this.boxBaseHeight,this.selectionIndex === choiceIndex ? this.selectColor : this.baseColor).draw();
             newFilledText("textForAnswers",this.boxX,this.boxStartingY + (choiceIndex*this.boxYSpacing) + this.textSize,"rgb(255,255,255)",this.textSize+"px JetBrains Mono ExtraBold",this.choices[choiceIndex].text).draw();
@@ -96,6 +87,7 @@ export let questionHandler = {
         }
     },
 
+    // unchanged - readFrom still gates which choices even show up
     append(answerList){
         for (let choiceI of answerList) {
             let canQuestion = true;
@@ -107,6 +99,7 @@ export let questionHandler = {
                     text:choiceI.text,
                     readFrom: choiceI?.readFrom,
                     writeTo: choiceI?.writeTo,
+                    goTo: choiceI?.goTo,
                 });
             }
         }
@@ -114,6 +107,34 @@ export let questionHandler = {
     },
 };
 
+// ---------------------------------------------------------------------
+// LOOKUP: figures out which identifier branch of dialogueDirectory[name]
+// wins. Right now that's always "normal", because the STORY branch is
+// still a stub in your data (it just has a comment "execute special code
+// or smth") and quest-override keys aren't implemented yet either. Kept
+// as its own function with the TODO hooks so wiring in real quest
+// branching later doesn't mean touching resolve() again.
+// ---------------------------------------------------------------------
+function selectStoryIdentifier(dialogueName) {
+    const branches = dialogueDirectory[dialogueName];
+    if (!branches) {
+        console.error(`dialogue directory not found: ${dialogueName}`);
+        return null;
+    }
+    for (const key of Object.keys(branches)) {
+        const prefix = key.split("-")[0];
+        if (prefix === "STORY") {
+            // TODO: quest-stage-specific story branch selection goes here
+            continue;
+        }
+        if (prefix !== "normal") {
+            // TODO: active-quest dialogue override selection goes here
+            continue;
+        }
+        return key; // "normal" - today's fallback for everything
+    }
+    return null;
+}
 
 export let dialogue = {
 
@@ -123,12 +144,11 @@ export let dialogue = {
     y : 700,
     width : 800,
     height : 200,
-    dialogueIndex : -1,
     characterIndex : 0,
     localElapsedTime : 0, //in milliseconds
 
-    characterSize : 15, //seperate from width to avoid high spacing with monospace fonts
-    characterWidth : 25, //pixel width
+    characterSize : 15,
+    characterWidth : 25,
     characterHeight : 25,
     startingYBuffer :20,
 
@@ -145,42 +165,35 @@ export let dialogue = {
 
     playerContinue:true,
 
-    directory:dialogueDirectory,
+    // one active conversation's worth of state. index:-1 means "nothing loaded".
+    session: {
+        sequence: [],
+        index: -1,
+        type: null,   // "story" | "shop" | "oneshot"
+        name: null,   // dialogueName for story/oneshot, shopKey for shop
+    },
 
-    //local dialogue stats
     name : "",
     textFinished : false,
-    resolving : false, //do not run the update loop if we need to resolve an action; such as asking questions or receiving user input
+    resolving : false,
 
     active:false,
 
     precomputedText : [],
 
-    precomputeWordWrapping : function(text){//Sorry for the comment spam, I really wanted to make sure I could understand it in case I forgot in the future
+    precomputeWordWrapping : function(text){
         if (!text) {return}
 
         let final = [];
         let split = text.split(" ");
         let carrier = "";
         for (let word of split) {
-            //we identify carriers; values that have text modifications (different color, animations, size, etc...)
-            //@ defines the start of a carrier
-            //@end defines the end of a carrier, and it goes back to normal styling                    v this first parenthesis is "split" further below to cleanly differentiate type and value
-            //this specifically looks for a type with it's values enclosed in parenthesis (example: rgb(255,255,255))
-            //                                                                                      ^type  ^values in the parenthesis
-            //the program knows the difference between values and types as types are defined first, and when it sees a parenthesis,
-            // it knows inside of that are the values, and it finds the ending parenthesis to complete what the value(s) is
-            //You can stack styles! They are divided by a "/" written as a string,
-            //AFTER THE LAST "/", IT IDENTIFIES IT AS THE TEXT YOU WANT THE STYLING ADDED ON TO!
-            if (word.substring(0, 1) === "@" && word.substring(0, 4) !== "@end") {//for a start or end cue
-                let splitStyle = word.split("/");//splits all the identified styles
-                let subCarrier = []//small array containing the identified type and value pair
+            if (word.substring(0, 1) === "@" && word.substring(0, 4) !== "@end") {
+                let splitStyle = word.split("/");
+                let subCarrier = []
                 for (let i = 0; i < splitStyle.length - 1; i++) {
-                    //we pull every modifier pair from this carrier and dump it into a subcarrier array (shown above)
                     let separated = splitStyle[i].split("(");
-                    //"separated" gives us the type [0] and value [1], using the first parenthesis to differentiate between the two (the first parenthesis is discarded from the split function btw)
-                    //you'll see below the program then just substrings around the residual parenthesis and starting "@" to get a clean type and value list
-                    if (separated[0].substring(0,1)==="@") {//the first modifier always has the @ in the start, so we substring around it to remove that
+                    if (separated[0].substring(0,1)==="@") {
                         subCarrier.push( {type:separated[0].substring(1,separated[0].length) ,value: separated[1].substring( 0, separated[1].length - 1 ) } );
                     } else {
                         subCarrier.push({type:separated[0], value:separated[1].substring(0, separated[1].length - 1)});
@@ -188,16 +201,13 @@ export let dialogue = {
                 }
                 carrier = subCarrier;
                 final.push([splitStyle[splitStyle.length - 1], carrier]);
-            } else if (word.substring(0, 4) === "@end"){//make sure future letters/words don't carry the same properties as we should've ended it now
+            } else if (word.substring(0, 4) === "@end"){
                 carrier = "";
-            } else {//this should only carry on the carrier values when we don't see the stopper yet (@end)
+            } else {
                 final.push([word,carrier]);
             }
-            // console.log(this.precomputedText)
         }
-        //now that FINAL has the words, we break that down even further into LETTERS and add extra positional metadata
 
-        //word positions are screen-space relative, DO NOT USE CAMERA VALUES
         let currentX = 0;
         let currentY = 0;
 
@@ -211,12 +221,9 @@ export let dialogue = {
                     if (style.type === "size") {
                         letterWidth = style.value;
                         letterHeight = style.value;
-                        console.log("we changed the size bruh");
                     }
                 }
             }
-
-
 
             if ((word[0].length * letterWidth)+ SPACING + currentX > this.width) {
                 currentX=0;
@@ -227,7 +234,6 @@ export let dialogue = {
                 this.precomputedText.push({letter:word[0][letterIndex], x:currentX,y:currentY + this.startingYBuffer,size:letterWidth, style : word[1]});
                 currentX += (letterWidth-10) + (letterIndex === word[0].length-1 ? SPACING : 0);
             }
-
         }
         dialogue.resolving = false;
     },
@@ -236,42 +242,34 @@ export let dialogue = {
         this.playerInteract = true;
 
         if (!this.textFinished) {
-            console.log("INPUT A");
             this.characterIndex = this.precomputedText.length-1;
             this.textFinished = true;
-        } else if (this.textFinished && questionHandler.satisfied) {
-            console.log("INPUT B");
-            dialogue.textFinished = false;
-            this.dialogueIndex++;
-            dialogue.dialoguePresent = false;
-            dialogue.localElapsedTime = 0;
-            dialogue.precomputedText = [];
-            dialogue.characterIndex = 0;
-            dialogue.resolve(dialogue.name);
+            return;
         }
+
+        if (!questionHandler.satisfied) return; // waiting on a choice pick
+
+        const currentEntry = this.session.sequence[this.session.index];
+
+        if (currentEntry?.oneshot) {
+            this.closeDialogue();
+            return;
+        }
+
+        this.session.index++;
+        this.resetPerLineState();
+
+        if (this.session.index >= this.session.sequence.length) {
+            this.closeDialogue();
+            return;
+        }
+
+        this.advanceToValidEntry();
     },
 
     update : function(delta) {
         if (!this.active) {return}
-        if (dialogue.selectedData.who !== "nobody" &&
-            dialogue.dialogueIndex > dialogueDirectory[dialogue.selectedData.who][dialogue.selectedData.textIdentifier].length-1 &&
-            dialogue.playerInteract
-        ) {
-            dialogue.dialogueIndex = -1;
-            dialogue.textFinished = false;
-            this.playerInteract = false;
-            dialogue.dialoguePresent = false;
-            dialogue.selectedData = {who:"nobody",textIdentifier:"none"};
-            playerController.state = "active";
-            dialogue.localElapsedTime = 0;
-            dialogue.characterIndex = 0;
-            this.active = false
-            dialogue.precomputedText = [];
-            console.log("We are giving back control");
-            return;
-        }
-        if (dialogue.dialogueIndex < 0 || dialogue.resolving) {return}
-
+        if (this.session.index < 0 || this.resolving) {return}
 
         if (!questionHandler.satisfied && this.textFinished) {
             questionHandler.update(delta);
@@ -281,8 +279,8 @@ export let dialogue = {
 
         if (this.precomputedText.length-1 === this.characterIndex) {this.textFinished = true;}
     },
-    
-    setup(options={}) {//setup with no params defaults to the worldHandler configuration
+
+    setup(options={}) {
         const {
             backgroundBox = true,
             x =1920/2 - 400,
@@ -295,13 +293,13 @@ export let dialogue = {
             boxStartingY=400,
             boxX=(1920/2) - (500/2),
         } = options
-        
+
         this.backgroundBox = backgroundBox
         this.x = x
         this.y = y
         this.width = width
         this.height = height
-        
+
         questionHandler.boxWidth = boxWidth
         questionHandler.boxBaseHeight=boxBaseHeight
         questionHandler.boxStartingY=boxStartingY
@@ -311,7 +309,6 @@ export let dialogue = {
     draw(){
         if (!this.active) {return}
         if (this.backgroundBox) newRect("dialogueBoxBG",dialogue.x - this.characterSize, dialogue.y - this.characterSize,dialogue.width + this.characterSize,dialogue.height + this.characterSize,"rgb(80,80,80)").draw();
-
 
         if (!this.textFinished) {
             let delayTime = this.textSpeed;
@@ -385,187 +382,179 @@ export let dialogue = {
         if (!questionHandler.satisfied && this.textFinished) {
             questionHandler.draw();
         }
-
     },
 
-    //you should run this, not the update function. This lets us know which dialogue to use
-    resolve : function (dialogueName,startingIndex = false, options={}) {
-        const {
-            directoryType="dialogueDirectory",
-            specificKey=null,
-            playerContinue=true,
-            overlap=false,
-            //oneshots do not expect input
-            shopOneshot=false,
-            oneshot=false,
-        } = options
-        this.playerContinue=playerContinue;
-        this.active = true;
-        dialogue.resolving = true;
-        if (dialogue.dialoguePresent && !overlap) {return}
-        dialogue.dialoguePresent = true;
-        questionHandler.choices = [];
+    // ---------------------------------------------------------------
+    // Entry point. Call shapes:
+    //   dialogue.resolve({type:"story", name:"guy"})
+    //   dialogue.resolve({type:"shop",  shopKey:"guy", entryName:"entrance"})
+    //   dialogue.resolve({type:"oneshot", text:item.hoverDescription})
+    // Optional on all: playerContinue (default true), overlap (default false)
+    // ---------------------------------------------------------------
+    resolve(request) {
+        const { overlap = false } = request;
 
-        console.log("hi");
+        if (this.dialoguePresent && !overlap) return;
+
+        this.playerContinue = request.playerContinue ?? true;
+        this.active = true;
+        this.dialoguePresent = true;
+        this.resolving = true;
+        questionHandler.choices = [];
+        questionHandler.satisfied = true;
+
         if (overlap) {
-            dialogue.dialogueIndex = -1;
-            dialogue.textFinished = false;
-            dialogue.localElapsedTime = 0;
-            dialogue.characterIndex = 0;
-            dialogue.precomputedText = [];
+            this.resetPerLineState();
         }
 
+        let sequence;
+        let sessionName;
 
-        if (directoryType === "dialogueDirectory") {
-            if (!dialogueDirectory[dialogueName]) {Error("dialogue directory not found.");} else if (dialogueDirectory[dialogueName]?.normal === null) {Error("You did not supply a normal (default) for this dialogue: "+dialogueName)}
-            dialogue.name = dialogueName;
-            this.directory = dialogueDirectory
-            //figure out if something is occupying it
-
-            for (let i = 0; i < Object.keys(dialogueDirectory[dialogueName]).length; i++) {
-                const identifier = Object.keys(dialogueDirectory[dialogueName])[i];
-                if (identifier.split("-")[0] === "STORY") {//Main story specific things
-                    //execute special code or smth
-                } else if (identifier.split("-")[0] !== "STORY" && identifier.split("-")[0] !== "normal") {//checking if we have other quests besides the story
-                    //push this into a quest array
-                } else if (identifier.split("-")[0] === "normal") {
-                    dialogue.dialogueIndex= startingIndex ? 0 : dialogue.dialogueIndex;
-                    let dialogueInst = dialogueDirectory[dialogueName][identifier][dialogue.dialogueIndex];
-                    let canDo = true;
-                    if (dialogueInst?.condition) {
-                        if (playerData.internalData[dialogueInst?.condition.check[0]] === dialogueInst?.condition.check[1]) {
-                            canDo = false;
-                            console.log("resolving condition because TRUE")
-                            dialogue.resolving = false
-                            dialogue.dialoguePresent = false;
-                            this.active = false;
-                            dialogue.resolve(dialogueInst?.condition.ifTrue,true);
-                            return;
-                        } else {
-                            if (Object.keys(dialogueInst).length <2) {
-                                this.active = false;
-                                dialogue.dialogueIndex = -1;
-                                dialogue.textFinished = false;
-                                this.playerInteract = false;
-                                dialogue.dialoguePresent = false;
-                                dialogue.selectedData = {who:"nobody",textIdentifier:"none"};
-                                playerController.state = "active";
-                                dialogue.localElapsedTime = 0;
-                                dialogue.characterIndex = 0;
-                                dialogue.precomputedText = [];
-                            }
-                        }
-                    }
-
-                    if (canDo) {
-                        if (dialogueInst?.choices) {
-                            questionHandler.satisfied = false;
-                            questionHandler.append(dialogueInst.choices);
-                        }
-
-                        if (dialogueInst?.writeTo) {
-                            playerData.internalData[dialogueInst?.writeTo[0]] = dialogueInst?.writeTo[1];
-                            if (Object.keys(dialogueInst).length < 2) {
-                                dialogue.textFinished = false;
-                                this.dialogueIndex++;
-                                dialogue.dialoguePresent = false;
-                                dialogue.localElapsedTime = 0;
-                                dialogue.precomputedText = [];
-                                dialogue.characterIndex = 0;
-                                dialogue.resolve(dialogue.name);
-                            }
-                        }
-
-                        if (dialogueInst?.battle) {
-                            //trigger battle mechanics by loading it into the player controller
-                            this.dialoguePresent=false;
-                            dialogue.name = "";
-                            playerController.state = "battle";
-                            //battle start needs correct parameters
-                            console.log(dialogueInst.battle)
-                            battle.start(dialogueInst.battle.enemies,world.currentLocation, dialogueInst.battle.backgroundData);
-                        } else if (dialogueInst?.text) {
-                            this.precomputeWordWrapping(dialogueInst?.text)
-                            dialogue.selectedData = {who:dialogueName, textIdentifier:identifier,
-                                voice:dialogueDirectory[dialogueName][identifier][dialogue.dialogueIndex]?.voice ? dialogueDirectory[dialogueName][identifier][dialogue.dialogueIndex]?.voice : "OO_Talk"
-                            };
-                        }
-                    }
-
-                    break;
-                } else {
-                    dialogue.dialogueIndex=-1;
-                    break;
-                }
-            }
-       } else if (directoryType === "shop") {
-            let directory = shopDirectory[specificKey].dialogue;
-
-            for (let i = 0; i < directory[dialogueName].length; i++) {
-                dialogue.dialogueIndex = startingIndex ? 0 : dialogue.dialogueIndex;
-                let dialogueInst = directory[dialogueName][identifier][dialogue.dialogueIndex];
-                let canDo = true;
-                if (dialogueInst?.condition) {
-                    if (playerData.internalData[dialogueInst?.condition.check[0]] === dialogueInst?.condition.check[1]) {
-                        canDo = false;
-                        console.log("resolving condition because TRUE")
-                        dialogue.resolving = false
-                        dialogue.dialoguePresent = false;
-                        this.active = false;
-                        dialogue.resolve(dialogueInst?.condition.ifTrue,true);
-                        return;
-                    } else {
-                        if (Object.keys(dialogueInst).length <2) {
-                            this.active = false;
-                            dialogue.dialogueIndex = -1;
-                            dialogue.textFinished = false;
-                            this.playerInteract = false;
-                            dialogue.dialoguePresent = false;
-                            dialogue.selectedData = {who:"nobody",textIdentifier:"none"};
-                            playerController.state = "active";
-                            dialogue.localElapsedTime = 0;
-                            dialogue.characterIndex = 0;
-                            dialogue.precomputedText = [];
-                        }
-                    }
-                }
-
-                if (canDo) {
-                    if (dialogueInst?.choices) {
-                        questionHandler.satisfied = false;
-                        questionHandler.append(dialogueInst.choices);
-                    }
-
-                    if (dialogueInst?.writeTo) {
-                        playerData.internalData[dialogueInst?.writeTo[0]] = dialogueInst?.writeTo[1];
-                        if (Object.keys(dialogueInst).length < 2) {
-                            dialogue.textFinished = false;
-                            this.dialogueIndex++;
-                            dialogue.dialoguePresent = false;
-                            dialogue.localElapsedTime = 0;
-                            dialogue.precomputedText = [];
-                            dialogue.characterIndex = 0;
-                            dialogue.resolve(dialogue.name);
-                        }
-                    }
-
-                    if (dialogueInst?.battle) {
-                        //trigger battle mechanics by loading it into the player controller
-                        this.dialoguePresent=false;
-                        dialogue.name = "";
-                        playerController.state = "battle";
-                        //battle start needs correct parameters
-                        console.log(dialogueInst.battle)
-                        battle.start(dialogueInst.battle.enemies,world.currentLocation, dialogueInst.battle.backgroundData);
-                    } else if (dialogueInst?.text) {
-                        this.precomputeWordWrapping(dialogueInst?.text)
-                        dialogue.selectedData = {who:dialogueName, textIdentifier:identifier,
-                            voice:dialogueDirectory[dialogueName][identifier][dialogue.dialogueIndex]?.voice ? dialogueDirectory[dialogueName][identifier][dialogue.dialogueIndex]?.voice : "OO_Talk"
-                        };
-                    }
-                }
+        switch (request.type) {
+            case "story": {
+                const identifier = selectStoryIdentifier(request.name);
+                if (!identifier) { this.closeDialogue(); return; }
+                sequence = dialogueDirectory[request.name][identifier];
+                sessionName = request.name;
                 break;
             }
+            case "shop": {
+                const shop = shopDirectory[request.shopKey];
+                if (!shop) {
+                    console.error(`shop not found: ${request.shopKey}`);
+                    this.closeDialogue();
+                    return;
+                }
+                sequence = shop.dialogue[request.entryName];
+                if (!sequence) {
+                    console.error(`shop dialogue entry not found: ${request.shopKey}.${request.entryName}`);
+                    this.closeDialogue();
+                    return;
+                }
+                sessionName = request.shopKey;
+                break;
+            }
+            case "oneshot": {
+                // request.text can be a plain string (item.hoverDescription /
+                // item.buyDialogue) or a {text, voice} object like the rest
+                // of the directories use.
+                const rawEntry = typeof request.text === "object"
+                    ? request.text
+                    : {text: request.text, voice: request.voice};
+                sequence = [{...rawEntry, oneshot: true}];
+                sessionName = request.name ?? "oneshot";
+                break;
+            }
+            default:
+                console.error(`Unknown dialogue resolve type: ${request.type}`);
+                this.closeDialogue();
+                return;
         }
-    }
+
+        this.session = {sequence, index: 0, type: request.type, name: sessionName};
+        this.advanceToValidEntry();
+    },
+
+    // Applies whatever's at session.index, or closes out if the sequence
+    // ran dry / wasn't found.
+    advanceToValidEntry() {
+        const entry = this.session.sequence?.[this.session.index];
+        if (!entry) { this.closeDialogue(); return; }
+        this.applyEntry(entry);
+    },
+
+    // The part that used to be duplicated between the dialogueDirectory and
+    // shop branches. Doesn't know or care which directory the entry came
+    // from - just reacts to whichever of these fields are present.
+    applyEntry(entry) {
+        if (entry.condition) {
+            const {check, ifTrue} = entry.condition;
+            if (playerData.internalData[check[0]] === check[1]) {
+                if (this.session.type === "shop") {
+                    this.resolve({type:"shop", shopKey:this.session.name, entryName:ifTrue, overlap:true});
+                } else {
+                    this.resolve({type:"story", name:ifTrue, overlap:true});
+                }
+                return;
+            }
+        }
+
+        if (entry.writeTo) {
+            playerData.internalData[entry.writeTo[0]] = entry.writeTo[1];
+        }
+
+        if (entry.choices) {
+            questionHandler.satisfied = false;
+            questionHandler.append(entry.choices);
+        }
+
+        if (entry.battle) {
+            this.dialoguePresent = false;
+            this.active = false;
+            playerController.state = "battle";
+            battle.start(entry.battle.enemies, world.currentLocation, entry.battle.backgroundData);
+            return;
+        }
+
+        if (entry.text) {
+            this.precomputeWordWrapping(entry.text);
+            this.selectedData = {
+                who: this.session.name,
+                textIdentifier: this.session.type,
+                voice: entry.voice || "OO_Talk",
+            };
+        } else {
+            // nothing to type out (e.g. a choices-only prompt) - don't sit
+            // there waiting on a typewriter effect that has nothing to type
+            this.textFinished = true;
+        }
+
+        if (!entry.text && !entry.choices) {
+            // condition-only dead end that didn't redirect, or a totally
+            // empty entry - there's nothing left to show
+            this.closeDialogue();
+            return;
+        }
+
+        this.resolving = false;
+    },
+
+    // Called by questionHandler once a choice is confirmed. writeTo happens
+    // no matter what; goTo jumps to a different named entry point within
+    // the same source (this is what your shop "talk" -> whoAmI/locationAndWhy
+    // needs - writeTo alone can't redirect you anywhere).
+    handleChoiceSelected(selection) {
+        if (selection?.writeTo) {
+            playerData.internalData[selection.writeTo[0]] = selection.writeTo[1];
+        }
+
+        if (selection?.goTo) {
+            if (this.session.type === "shop") {
+                this.resolve({type:"shop", shopKey:this.session.name, entryName:selection.goTo, overlap:true});
+            } else {
+                this.resolve({type:"story", name:selection.goTo, overlap:true});
+            }
+        }
+
+        // No goTo: just resume the normal sequence. Next handlePlayerInput()
+        // call advances session.index as usual.
+    },
+
+    resetPerLineState() {
+        this.textFinished = false;
+        this.localElapsedTime = 0;
+        this.characterIndex = 0;
+        this.precomputedText = [];
+    },
+
+    closeDialogue() {
+        this.active = false;
+        this.dialoguePresent = false;
+        this.playerInteract = false;
+        this.resolving = false;
+        this.session = {sequence: [], index: -1, type: null, name: null};
+        this.selectedData = {who: "nobody", textIdentifier: "none"};
+        this.resetPerLineState();
+        playerController.state = "active";
+    },
 }
