@@ -339,7 +339,7 @@ export function newImage(id,x,y,width,height,image,ignoreCamera=false) {
     return renderedShapes[id];
 }
 
-export function newText(id,x,y,color="rgb(255,255,255)",font = "16px Arial",text = "hello!",ignoreCamera=false) {
+export function newText(id,x,y,color="rgb(255,255,255)",font = "30px JetBrains Mono ExtraBold",text = "hello!",ignoreCamera=false) {
     renderedShapes[id] = {X:x,Y:y,Color:color,Font : font, Text : text, draw : function(){
             if (!ignoreCamera) {
                 //find what cam, battle or world
@@ -381,7 +381,7 @@ function wrapText(ctx, text, maxWidth) {
     return lines;
 }
 
-export function newWrappedText(id, x, y, maxWidth, color = "rgb(255,255,255)", font = "16px Arial", text = "hello!", lineHeight = 25, align = "left",ignoreCamera=false) {
+export function newWrappedText(id, x, y, maxWidth, color = "rgb(255,255,255)", font = "30px JetBrains Mono ExtraBold", text = "hello!", lineHeight = 25, align = "left",ignoreCamera=false) {
     renderedShapes[id] = {X: x, Y: y, MaxWidth: maxWidth, Color: color, Font: font, Text: text, LineHeight: lineHeight, Align: align, draw: function () {
             const s = renderedShapes[id];
             ctx.font = s.Font;
@@ -399,7 +399,7 @@ export function newWrappedText(id, x, y, maxWidth, color = "rgb(255,255,255)", f
     return renderedShapes[id];
 }
 
-export function newFilledWrappedText(id, x, y, maxWidth, color = "rgb(255,255,255)", font = "16px Arial", text = "hello!", lineHeight = 25, align = "left", ignoreCamera = false, outlineColor = "black", outlineWidth = 2) {
+export function newFilledWrappedText(id, x, y, maxWidth, color = "rgb(255,255,255)", font = "30px JetBrains Mono ExtraBold", text = "hello!", lineHeight = 25, align = "left", ignoreCamera = false, outlineColor = "black", outlineWidth = 2) {
     renderedShapes[id] = {X: x, Y: y, MaxWidth: maxWidth, Color: color, Font: font, Text: text, LineHeight: lineHeight, Align: align, OutlineColor: outlineColor, OutlineWidth: outlineWidth, draw: function () {
             const s = renderedShapes[id];
 
@@ -440,7 +440,7 @@ export function newFilledWrappedText(id, x, y, maxWidth, color = "rgb(255,255,25
     return renderedShapes[id];
 }
 
-export function newFilledText(id, x, y, color = "rgb(255,255,255)", font = "16px Courier New", text = "hello!", ignoreCamera = false, outlineColor = "black", outlineWidth = 2) {
+export function newFilledText(id, x, y, color = "rgb(255,255,255)", font = "30px JetBrains Mono ExtraBold", text = "hello!", ignoreCamera = false, outlineColor = "black", outlineWidth = 2) {
     renderedShapes[id] = {X: x, Y: y, Color: color, Font: font, Text: text, OutlineColor: outlineColor, OutlineWidth: outlineWidth, draw: function () {
             const s = renderedShapes[id];
 

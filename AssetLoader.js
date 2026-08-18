@@ -47,6 +47,7 @@ export const assets = {
         second_sanct:"Assets/music/Second_Sanctuary.mp3",
         rude_buster:"Assets/music/Rude Buster.mp3",
         SPAWN:"Assets/music/SPAWN.mp3",
+        shifting:"Assets/music/shifting.mp3",
 
     },
     sounds: {

@@ -403,9 +403,7 @@ export let dialogue = {
         questionHandler.choices = [];
         questionHandler.satisfied = true;
 
-        if (overlap) {
-            this.resetPerLineState();
-        }
+        if (overlap) {this.resetPerLineState();}
 
         let sequence;
         let sessionName;
@@ -438,6 +436,8 @@ export let dialogue = {
                 // request.text can be a plain string (item.hoverDescription /
                 // item.buyDialogue) or a {text, voice} object like the rest
                 // of the directories use.
+
+                //oneshots do not take player input and are not interactable, they must be manually overrided
                 const rawEntry = typeof request.text === "object"
                     ? request.text
                     : {text: request.text, voice: request.voice};

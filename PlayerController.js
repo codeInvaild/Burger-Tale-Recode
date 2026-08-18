@@ -10,6 +10,7 @@ import {shopHandler} from "./shopHandler.js";
 import {changeGameState} from "./main.js";
 import {shopDirectory} from "./shopDirectory.js";
 import {dialogueDirectory} from "./dialogueDirectory.js";
+import {allyDirectory} from "./AllyDirectory";
 
 export let playerController = {//this handles the player within the world and moving them with the desired keybinds
     image : "cobalt",
@@ -21,10 +22,10 @@ export let playerController = {//this handles the player within the world and mo
     width:100,
     height:100,
     collisionData : {
-        x:25,
+        x:35,
         y:25,
         width:50,
-        height:50,
+        height:40,
     },
     interactionBox : {
         x:-50,
@@ -192,8 +193,33 @@ export let playerData = { //This handles all necessary player data
     items : [],
     inventory : [], //misc items or like random items I want to give to the player lol
     enchants : [],
+    allyData:{//use this for gears to modify and keep hp persistent throughout fights
+
+    },
     currency:{
         Copper:0,
         Gold:1,
     }
 };
+
+function temporaryArtificialSave(args){
+    for (let ally of args.allies) {
+        let allySelected = allyDirectory[ally];
+        playerData.allyData[ally] = {
+            name:allySelected.name,
+            image:allySelected.image,
+            attack:{current:allySelected.attack,max:allySelected.max},
+            health:{current:allySelected.health,max:allySelected.health},
+            defense:{current:allySelected.defense,max:allySelected.defense},
+            energy:{current:allySelected.energy,max:allySelected.energy},
+            speed:{current:allySelected.speed,max:allySelected.speed},
+            actions:allySelected.actions,
+        }
+    }
+}
+
+temporaryArtificialSave(
+    {
+        allies:["Cobalt","Illumine"],
+    }
+);

@@ -104,7 +104,7 @@ export let world = {
                 [0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                 [0,0,0,1,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,2], //20 x 16
             ],
-            LightLevel: 2,
+            LightLevel: 0.9,
             Music: "dark_sanct",
             battleMusic : "SPAWN",
             Areas: [//DRAWN FROM Y-PRIORITY, DO NOT CARE FOR HOW YOU ORDER THEM
@@ -114,7 +114,7 @@ export let world = {
                 {id : "guy", image: "man", imageData : {x:300, y:500,width:150, height:150},collisionData: {x:0,y:0,width:150,height:150}, interaction: {dialogue : "Iris_1"}},
                 {id : "guy", image: "man", imageData : {x:100, y:500,width:150, height:150},collisionData: {x:0,y:0,width:150,height:150}, interaction: {battle : {enemies : ["grass_dweller","grass_dweller","grass_dweller"], backgroundData: [{name:"sky",x:-100,y:-100,width:1920*1.5,height:1080*1.5,image:"sky"},{name:"grass",rectangle:true,x:-500,y:300,width:2920,height:2080,color:"rgb(39,129,95)"}] }}},
                 {id: "tree1", image: "tree2", imageData : {x:200,y:200,width:300,height:300}, collisionData: {x:150,y:0,width:100,height:100}},
-                {id:"shop",image: "shop",imageData: {x:400,y:800,width:300,height:300},collisionData: {x:0,y:100,width:300,height:200},interaction: {shop:"Turquoise"},},
+                {id:"shop",image: "shop",imageData: {x:400,y:800,width:300,height:300},collisionData: {x:0,y:100,width:300,height:200},interaction: {shop:"guy"},},
                 {id : "guy", image: "chillGuy", imageData : {x:300, y:800,width:150, height:150},collisionData: {x:0,y:0,width:150,height:150}, readFrom:{data:["chill",true],ifFalse:"invisible"},interaction: {dialogue : "chill_guy"}},
                 {id : "guy", image: "woman2", imageData : {x:700, y:900,width:150, height:150},collisionData: {x:0,y:0,width:150,height:150}, interaction: {dialogue : "thinker"}},
                 {id : "guy", image: "woman2", imageData : {x:900, y:900,width:150, height:150},collisionData: {x:0,y:0,width:150,height:150}, interaction: {dialogue : "thinker2"}, readFrom: {data:["Thinker",1]}},
@@ -152,7 +152,7 @@ export let world = {
             Areas: [
                 {id : "guy", image: "man", imageData : {x:600, y:500,width:150, height:150},collisionData: {x:0,y:0,width:150,height:150}, interaction: {dialogue : "aiden"}},
                 {id : "wom", image: "woman", imageData : {x:800, y:500,width:150, height:150},collisionData: {x:0,y:0,width:130,height:150}, interaction: {dialogue : "textTester"}},
-                {id : "lamp", image:"cornball",imageData: {x:400,y:800,width: 100,height:150},collisionData: {x:0,y:0,width:100,height:150},brightness:0.4,lightColor:"rgb(234,48,31)",lightRadius:200},
+                {id : "lamp", image:"cornball",imageData: {x:400,y:800,width: 100,height:150},collisionData: {x:0,y:0,width:100,height:150},brightness:0.8,lightColor:"rgb(234,48,31)",lightRadius:200},
                 {id : "lamp", image:"lampPost",imageData: {x:900,y:800,width: 100,height:150},collisionData: {x:0,y:0,width:100,height:150},brightness:0.3,lightColor:"rgb(255,255,255)",lightRadius:400,lightFlicker:true},
             ],
             Next: {

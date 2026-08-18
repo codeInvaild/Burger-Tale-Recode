@@ -2,8 +2,9 @@ export const shopDirectory = {
     guy: {
 
         visuals:[
-            {x:0,y:0,width:1920,height:1080,image:"shop1"},
+            {x:0,y:0,width:1920,height:1080,image:"shopBG1"},
         ],
+        music:"shifting",
 
         items: [
             {
@@ -43,7 +44,7 @@ export const shopDirectory = {
             },
         ],
 
-        gear:[
+        gears:[
             "..."
         ],
 
@@ -83,7 +84,7 @@ export const shopDirectory = {
                 hoverDialogue:"Interested in that apple dear? It's the best season to harvest right now! So enjoy while you can here, I'm sure you can't find anything like it up North~"
             }
         ],
-        gear:[
+        gears:[
             {
                 name:"gold sword",
                 price: 100,
