@@ -27,7 +27,7 @@ import {
     newFilledWrappedText
 } from "./Utility.js";
 import {keys, keybinds, keyPresses} from "./KeyboardInputHandler.js";
-import {playerController, playerInventory} from "./PlayerController.js";
+import {playerController, playerData, } from "./PlayerController.js";
 import {itemDirectory} from "./ItemDirectory.js";
 import {tweenService} from "./TweenService.js";
 import {gameWidth, gameHeight} from "./main.js";
@@ -138,11 +138,11 @@ class entity{
     constructor(stats,vectorData,side,teamIndex) {
         this.worldData = new vector2D(vectorData.x,vectorData.y,vectorData.width,vectorData.height,vectorData.rotation);
         this.maxStats = stats;//this contains original stats, sometimes we will have modifiers that change max stats at runtime so this is why we need this
-        this.health = {current: stats.health, max:stats.health};
-        this.defense = {current: stats.defense, max:stats.defense};
-        this.attack = {current: stats.attack, max:stats.attack};
-        this.energy = {current: stats.energy, max:stats.energy};
-        this.speed = {current: stats.speed, max:stats.speed};
+        this.health = {current: stats.health.current ?? stats.health, max:stats.health.max ?? stats.health};
+        this.defense = {current: stats.defense.current ?? stats.defense, max:stats.defense.max ?? stats.defense};
+        this.attack = {current: stats.attack.current ?? stats.attack, max:stats.attack.max ?? stats.attack};
+        this.energy = {current: stats.energy.current ?? stats.energy, max:stats.energy.max ?? stats.energy};
+        this.speed = {current: stats.speed.current ?? stats.speed, max:stats.speed.max ?? stats.speed};
         this.actions = [];
         this.other = [];
         this.name = stats.name;
@@ -289,7 +289,6 @@ export let battlefield = {
 
     //as soon as we call this, we offload control to actionDirectory.js
     grantTurn() {
-        console.log(this)
         //check if all enemies are downed or all allies are downed
         let alliesDowned = 0;
         let enemiesDowned = 0;
@@ -307,7 +306,7 @@ export let battlefield = {
             this.turn = 1;
             newCycle = true;
 
-            for (let item of this.itemIndexBuffer) {playerInventory.splice(item,1);}
+            for (let item of this.itemIndexBuffer) {playerData.items.splice(item,1);}
             this.itemIndexBuffer = [];
             battleUI.itemsInUse = [];
 
@@ -422,7 +421,7 @@ export let battleUI = {//this purely handles ui which is drawn over everything,
                             this.incrementAllyIndex();
                         } else if (mainUIIndexes[curMenu.curIndex] === "Item") {
                             //look through the player's inventory (playerController)
-                            this.state.menuStack.push({name:"item",maxIndex:playerInventory.length,curIndex:0});
+                            this.state.menuStack.push({name:"item",maxIndex:playerData.items.length,curIndex:0});
                         }
                     } else if (currentMenuName === "actions") {
                         if (curAllyInBattle.energy.current - playerActionDirectory[curAllyInBattle.actions[curMenu.curIndex]].cost <0) {
@@ -442,13 +441,13 @@ export let battleUI = {//this purely handles ui which is drawn over everything,
                         }
                         console.log(this.state.menuStack[this.state.menuStack.length-1].curIndex);
                         if (this.errorMessage === "") {
-                            availableAssets.sounds[itemDirectory[playerInventory[this.state.menuStack[this.state.menuStack.length-1].curIndex]]?.sound].play();
-                            this.state.targetType = itemDirectory[playerInventory[this.state.menuStack[this.state.menuStack.length-1].curIndex]]?.targetType;
+                            availableAssets.sounds[itemDirectory[playerData.items[this.state.menuStack[this.state.menuStack.length-1].curIndex]]?.sound].play();
+                            this.state.targetType = itemDirectory[playerData.items[this.state.menuStack[this.state.menuStack.length-1].curIndex]]?.targetType;
                             this.state.menuStack.push({name:"target",maxIndex:battlefield[this.state.targetType].length,curIndex:0});
                         }
 
 
-                        // availableAssets.sounds[itemDirectory[playerInventory[this.state.menuStack[this.state.menuStack.length-1].curIndex]]?.sound].play();
+                        // availableAssets.sounds[itemDirectory[playerData.items[this.state.menuStack[this.state.menuStack.length-1].curIndex]]?.sound].play();
                     } else if (currentMenuName === "target") {
                         let designatedTarget = battlefield[this.state.targetType][this.state.menuStack[this.state.menuStack.length-1].curIndex];
                         //check what the previous state before the target was
@@ -461,14 +460,14 @@ export let battleUI = {//this purely handles ui which is drawn over everything,
                         } else if (this.state.menuStack[this.state.menuStack.length-2].name === "item") {
                             //specifically search the player's inventory and rid of the item as they are one time use (splice)
 
-                            let selectedItem = itemDirectory[playerInventory[this.state.menuStack[this.state.menuStack.length-2].curIndex]];
+                            let selectedItem = itemDirectory[playerData.items[this.state.menuStack[this.state.menuStack.length-2].curIndex]];
                             let ind = (this.state.menuStack[this.state.menuStack.length-2].curIndex);
 
                             curAllyInBattle.logic = () => {
                                 new itemHandlerBattle("item",selectedItem.targetType,ind,curAllyInBattle,designatedTarget)/////////////////////////////////////////////////// king jong un master of goon
                             }
                             this.itemsInUse.push({allyIndex:this.state.allyIndex,itemIndex:ind});
-                            // playerInventory.splice(playerInventory[this.state.menuStack[this.state.menuStack.length-2].curIndex],1);
+                            // playerData.items.splice(playerData.items[this.state.menuStack[this.state.menuStack.length-2].curIndex],1);
                         }
                         //THIS IS THE FINAL CONFIRMATION STEP!
                         //MOVE UP THE ALLY INDEX AND RESET MENU STACK TO THE DEFAULT!
@@ -568,19 +567,19 @@ export let battleUI = {//this purely handles ui which is drawn over everything,
 
                 newRect("bx",(gameWidth/2) -400,(gameHeight/2)-200,800,400,"rgb(105,81,37)").draw();
                 newRect("bx2",(gameWidth/2) -400,(gameHeight/2)-200,800,80,"rgb(72,45,15)").draw();
-                for (let itemIndex=0; itemIndex < playerInventory.length; itemIndex++) {
+                for (let itemIndex=0; itemIndex < playerData.items.length; itemIndex++) {
                     if (curSelection === itemIndex) {
                         newRect("m",((gameWidth/2) -400) + (80*itemIndex),(gameHeight/2)-200,80,80,"rgb(105,81,37)").draw();
                     }
-                    ctx.drawImage(availableAssets.images[playerInventory[itemIndex]],(gameWidth/2)+ (80*itemIndex) -400,(gameHeight/2)-200,80,80)
+                    ctx.drawImage(availableAssets.images[playerData.items[itemIndex]],(gameWidth/2)+ (80*itemIndex) -400,(gameHeight/2)-200,80,80)
                 }
 
                 for (let itemIndex=0; itemIndex < this.itemsInUse.length; itemIndex++) {
                     newRect("m",((gameWidth/2) -400) + (80*this.itemsInUse[itemIndex].itemIndex),(gameHeight/2)-200,80,80,"rgba(0,0,0,0.49)").draw();
                 }
 
-                newText("itemName",(gameWidth/2) -400 + 20,(gameHeight/2)-90,"rgb(255,255,255)","30px JetBrains Mono ExtraBold",playerInventory[curSelection]).draw();
-                newWrappedText("itemDescription",(gameWidth/2) -380,(gameHeight/2)+20,760,"rgb(255,255,255)","35px JetBrains Mono ExtraBold",itemDirectory[playerInventory[this.state.menuStack[this.state.menuStack.length-1].curIndex]].description).draw();
+                newText("itemName",(gameWidth/2) -400 + 20,(gameHeight/2)-90,"rgb(255,255,255)","30px JetBrains Mono ExtraBold",playerData.items[curSelection]).draw();
+                newWrappedText("itemDescription",(gameWidth/2) -380,(gameHeight/2)+20,760,"rgb(255,255,255)","35px JetBrains Mono ExtraBold",itemDirectory[playerData.items[this.state.menuStack[this.state.menuStack.length-1].curIndex]].description).draw();
 
                 // newTargetHighlight("highlight_item",(gameWidth/2) -380,(gameHeight/2)+(curSelectio * 80))
             }
@@ -614,8 +613,9 @@ export let battle = {
         cameraBehavior.curCam = "battle";
 
         //load all allies
-        for (let allyIndex=0; allyIndex < playerTeam.length;allyIndex++) {
-            battlefield.allies.push(new entity(allyDirectory[playerTeam[allyIndex]],new vector2D(allyXBuffer,(heightBuffer * allyIndex) + heightAddon,characterSize,characterSize,0),"allies",allyIndex));
+        for (let allyIndex=0; allyIndex < playerData.playerTeam.length;allyIndex++) {
+            let allyName = playerData.playerTeam[allyIndex];
+            battlefield.allies.push(new entity(playerData.allyData[allyName],new vector2D(allyXBuffer,(heightBuffer * allyIndex) + heightAddon,characterSize,characterSize,0),"allies",allyIndex));
         }
         //load all enemies
         for (let enemyIndex = 0; enemyIndex < enemyData.length;enemyIndex++){
@@ -692,6 +692,10 @@ export let battle = {
             console.log("UOI LOST");
         } else if (battlefield.state === battleStates.BATTLE_WIN) {
             console.log("UOI WIN");
+
+
+            //apply HP stats from the battlefield to ally data in the playerController
+            for (let ally of battlefield.allies) {playerData.allyData[ally.name].health.current = ally.health.current;}
 
             setState(battleStates.TURN_WAITING);
             battleUI.battleBoxText = "You won! You gained No XP and Gold because that doesn't even exist yet...";

@@ -1,10 +1,11 @@
-import {newRect, newFilledText, newImage} from "./Utility.js";
+import {newRect, newFilledText, newImage, newRotatedRect} from "./Utility.js";
 import {dialogue} from "./dialogueClass.js";
 import {keyPresses as keypress, keybinds} from "./KeyboardInputHandler.js";
 import {availableAssets, playMusic} from "./AssetLoader.js";
 import {shopDirectory} from "./shopDirectory.js";
 import {changeGameState} from "./main.js";
 import {playerController, playerData} from "./PlayerController.js";
+import {itemDirectory} from "./ItemDirectory.js";
 
 let interactionOptions= ["Buy","Sell","Talk","Exit"]
 
@@ -21,7 +22,7 @@ export let shopHandler = {
             if (currentMenu.name === "main") {
                 if (currentMenu.curIndex <= 1) {
                     this.menuStack.push({
-                        name: "gearType",
+                        name: "Type",
                         curIndex: 0,
                         maxIndex: 1,
                         desiredType: interactionOptions[currentMenu.curIndex]
@@ -33,24 +34,19 @@ export let shopHandler = {
                     changeGameState("World");
                     playerController.state = "active";
                 }
-            } else if (currentMenu.name === "gearType") {
+            } else if (currentMenu.name === "Type") {
 
                 if (currentMenu.curIndex ===0 && currentMenu.desiredType === "Buy") {//items buy
                     this.menuStack.push({name:currentMenu.desiredType+"-items",curIndex: 0,maxIndex: shopDirectory[this.reference].items.length-1});
-                } else if (currentMenu.curIndex ===1 && currentMenu.desiredType === "Buy") {//gear buy
-                    this.menuStack.push({name:currentMenu.desiredType+"-gear",curIndex: 0,maxIndex: shopDirectory[this.reference].gears.length-1});
+                } else if (currentMenu.curIndex ===1 && currentMenu.desiredType === "Buy") {//gears buy
+                    this.menuStack.push({name:currentMenu.desiredType+"-gears",curIndex: 0,maxIndex: shopDirectory[this.reference].gears.length-1});
                 } else if (currentMenu.curIndex ===0 && currentMenu.desiredType === "Sell") {//items sell
-                    this.menuStack.push({name:currentMenu.desiredType+"-items",curIndex: 0,maxIndex: shopDirectory[this.reference].items.length-1});
+                    this.menuStack.push({name:currentMenu.desiredType+"-items",curIndex: 0,maxIndex: playerData.items.length-1});
                 } else if (currentMenu.curIndex ===1 && currentMenu.desiredType === "Sell") {//gear sell
-                    this.menuStack.push({name:currentMenu.desiredType+"-gear",curIndex: 0,maxIndex: playerData.gears.length-1});
+                    this.menuStack.push({name:currentMenu.desiredType+"-gears",curIndex: 0,maxIndex: playerData.gears.length-1});
                 }
-
-
-                if (currentMenu.desiredType === "Buy") {
-                    this.menuStack.push({name: "Buy", curIndex: 0, maxIndex: 0});
-                } else if (currentMenu.desiredType === "Sell") {
-
-                }
+            }  else if (currentMenu.name === "Buy-items") {
+                //check for player currency if they can afford it, and them add it to their inventory if plausible (and if they have the space for it)
             }
         } else if (keypress[keybinds.Left] || keypress[keybinds.Up]) {
             availableAssets.sounds.navigation.play();
@@ -92,6 +88,31 @@ export let shopHandler = {
                     newRect("highlight",1170,140+(i*150),600,110,"rgb(19,192,119)").draw();
                 }
                 newFilledText("optionShop",1170,240+(i*150),"rgb(255,255,255)","100px JetBrains Mono ExtraBold", interactionOptions[i]).draw();
+            }
+        } else if (currentMenu.name === "Type") {
+            let things = ["items","gears"]
+            for (let i = 0; i < 2; i++) {
+                if (currentMenu.curIndex === i) {
+                    newRect("highlight",1170,140+(i*150),600,110,"rgb(19,192,119)").draw();
+                }
+                newFilledText("optionShop",1170,240+(i*150),"rgb(255,255,255)","100px JetBrains Mono ExtraBold", things[i]).draw();
+            }
+        } else if (currentMenu.name === "Buy-items") {
+            for (let i = 0; i < shopDirectory[this.reference].items.length; i++) {
+                newRect("tileShop",1090 + (195 * (i%4)),140 + (Math.floor(i/4) * 195),175,175,currentMenu.curIndex === i ? "rgb(200,200,200)":"rgb(38,30,30)").draw();
+                if (currentMenu.curIndex === i) {
+                    newRotatedRect("thing",1090 + (195 * (i%4)) + 87.5,140 + (Math.floor(i/4) * 195) + 87.5,150,150,"rgb(64,54,54)",0.78539816).draw();
+                }
+                let itema = (itemDirectory[ shopDirectory[this.reference].items[i].itemName]);
+                newImage("thing",1090 + (195 * (i%4)) + 12.5,140 + (Math.floor(i/4) * 195) + 12.5,150,150,availableAssets?.images[ itema.image] ?? availableAssets.images.apple).draw();
+                // newRect("border1",1090 + (195 * (i%4)),140 + (Math.floor(i/4) * 195),175,50,"rgb(0,0,0,0.5)").draw();
+                newRect("border1",1090 + (195 * (i%4)),140 + (Math.floor(i/4) * 195) + 125,175,50,"rgb(0,0,0,0.5)").draw();
+                // let textLength = (shopDirectory[this.reference].items[i].name).length;
+                // let baseSize = 25;
+                // let textSize =
+                // newFilledText("cost",1090 + (195 * (i%4)) + 10,140 + (Math.floor(i/4) * 195) + 35,"rgb(255,255,255)","25px JetBrains Mono ExtraBold", shopDirectory[this.reference].items[i].name).draw();
+                newFilledText("cost",1090 + (195 * (i%4)) + 10,140 + (Math.floor(i/4) * 195) + 160,"rgb(255,255,255)","25px JetBrains Mono ExtraBold","$"+shopDirectory[this.reference].items[i].cost.amount).draw();
+
             }
         }
 

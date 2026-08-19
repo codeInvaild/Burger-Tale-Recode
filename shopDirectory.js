@@ -30,7 +30,7 @@ export const shopDirectory = {
             },
             {
                 name:"Rotten Tomato Sauce",
-                itemName:"rotten_ketchup",
+                itemName:"ketchup",
                 hoverDescription: "I found it in a trash can this time! ...what? Feed it to your enemies, dont eat it you nitwit!" ,
                 buyDialogue:"Thank god, my store smells better now",
                 cost:{amount:15,currency:"Copper"},

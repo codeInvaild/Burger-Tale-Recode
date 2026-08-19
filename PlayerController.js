@@ -1,5 +1,4 @@
 //THIS IS THE PLAYER CONTROLLER FOR THE WORLD, DOES NOT APPLY FOR MENUS OR THE BATTLE STATE; FIND THE ACCORDING SCRIPT
-
 import { keys, keybinds, keyPresses } from './KeyboardInputHandler.js';
 import {LERP} from "./Utility.js";
 const canvas = document.getElementById('canvas');
@@ -10,7 +9,7 @@ import {shopHandler} from "./shopHandler.js";
 import {changeGameState} from "./main.js";
 import {shopDirectory} from "./shopDirectory.js";
 import {dialogueDirectory} from "./dialogueDirectory.js";
-import {allyDirectory} from "./AllyDirectory";
+import {allyDirectory} from "./AllyDirectory.js";
 
 export let playerController = {//this handles the player within the world and moving them with the desired keybinds
     image : "cobalt",
@@ -161,17 +160,6 @@ export let camera = {
 }
 
 export let playerInventory = [
-    "sugar_apple",
-    "sugar_apple",
-    "cornball",
-    "sugar_apple",
-    "sugar_apple",
-    "cornball",
-    "sugar_apple",
-    "sugar_apple",
-    "cornball",
-    "ketchup",
-
 ];//SHOULD BE A LIST OF REFERENCES TOWARDS ITEMS IN THE ITEM DIRECTORY
 
 export let playerSettings= {
@@ -190,12 +178,26 @@ export let playerData = { //This handles all necessary player data
         chill:true,
         nihilism:true,
     },
-    items : [],
+    items : [
+        "sugar_apple",
+        "sugar_apple",
+        "cornball",
+        "sugar_apple",
+        "sugar_apple",
+        "cornball",
+        "sugar_apple",
+        "sugar_apple",
+        "cornball",
+        "ketchup",
+    ],
+    itemStorage:[],//array containing up to 30 extra items                     v this extra info is needed to see who is using what
+    gears:[],//contains an object array example: gears: [   {name:copperSword,user:null}  ] //also the amount of gears you can have is 100
     inventory : [], //misc items or like random items I want to give to the player lol
     enchants : [],
     allyData:{//use this for gears to modify and keep hp persistent throughout fights
 
     },
+    playerTeam:["Cobalt","Illumine"],
     currency:{
         Copper:0,
         Gold:1,
@@ -208,11 +210,11 @@ function temporaryArtificialSave(args){
         playerData.allyData[ally] = {
             name:allySelected.name,
             image:allySelected.image,
-            attack:{current:allySelected.attack,max:allySelected.max},
-            health:{current:allySelected.health,max:allySelected.health},
-            defense:{current:allySelected.defense,max:allySelected.defense},
-            energy:{current:allySelected.energy,max:allySelected.energy},
-            speed:{current:allySelected.speed,max:allySelected.speed},
+            attack:{current:allySelected.attack,max:allySelected.attack, base:allySelected.attack},
+            health:{current:allySelected.health,max:allySelected.health, base:allySelected.health},
+            defense:{current:allySelected.defense,max:allySelected.defense, base:allySelected.defense},
+            energy:{current:allySelected.energy,max:allySelected.energy, base:allySelected.energy},
+            speed:{current:allySelected.speed,max:allySelected.speed, base:allySelected.speed},
             actions:allySelected.actions,
         }
     }
@@ -220,6 +222,6 @@ function temporaryArtificialSave(args){
 
 temporaryArtificialSave(
     {
-        allies:["Cobalt","Illumine"],
+        allies:playerData.playerTeam,
     }
 );

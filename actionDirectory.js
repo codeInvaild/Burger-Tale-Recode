@@ -24,7 +24,7 @@ import {
 } from "./Utility.js";
 import {gameHeight,gameWidth} from "./main.js";
 import {availableAssets} from "./AssetLoader.js";
-import {playerInventory} from "./PlayerController.js";
+import {playerData, playerInventory} from "./PlayerController.js";
 import {itemDirectory} from "./ItemDirectory.js";
 
 
@@ -116,7 +116,6 @@ export let directionTypes = {
     right:"Right",
     down:"Down",
 }
-
 
 //do not ever set up a dodge that happens after the animation timeline is completed, the player won't be able to guard against it
 export let dodgeHandler = {
@@ -625,7 +624,7 @@ export class itemHandlerBattle {
         this.objX = target.worldData.x + itemHandlerBattle.globalConfigurations.xOffset;
         this.objY= target.worldData.y + itemHandlerBattle.globalConfigurations.yOffset;
 
-        this.image = itemDirectory[playerInventory[itemIndex]]?.image
+        this.image = itemDirectory[playerData.items[itemIndex]]?.image
 
         this.itemIndex = itemIndex;
 
@@ -648,7 +647,7 @@ export class itemHandlerBattle {
                     objY: target.worldData.y + itemHandlerBattle.globalConfigurations.maxYOffset
                 }).play();
 
-                availableAssets.sounds[itemDirectory[playerInventory[itemIndex]]?.sound ?? "nutella"].play();
+                availableAssets.sounds[itemDirectory[playerData.items[itemIndex]]?.sound ?? "nutella"].play();
 
                 this.tweenedParticles = true;
             }
@@ -656,7 +655,7 @@ export class itemHandlerBattle {
 
             if (this.currentTime >= itemHandlerBattle.globalConfigurations.animationTime/2 && !this.halfway) {
                 //start all anims
-                let selectedItem = itemDirectory[playerInventory[itemIndex]];
+                let selectedItem = itemDirectory[playerData.items[itemIndex]];
                 for (let inst of this.particles) {
                     tweenService.create(inst,tweenService.TweenInfo(1.25,"SineOut"),{x:inst.oX + inst.directionX,y:inst.oY  + inst.directionY}).play();
                     setTimeout(()=>{
@@ -676,7 +675,7 @@ export class itemHandlerBattle {
                     "health"
                 );
                 new damageCounter(selectedItem?.heal || selectedItem?.damage,target.worldData.x + (target.worldData.width/2),target.worldData.y + (target.worldData.height/2),"rgb(114,208,126,");
-                battleUI.battleBoxText = self.name + " used " + playerInventory[itemIndex] + " on "+ target.name;
+                battleUI.battleBoxText = self.name + " used " + playerData.items[itemIndex] + " on "+ target.name;
                 battlefield.itemIndexBuffer.push(itemIndex);
                 setTimeout(()=>{
                     battlefield.turn++;
