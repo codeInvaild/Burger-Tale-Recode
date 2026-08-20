@@ -22,19 +22,25 @@ export let shopHandler = {
 
         if (keyPresses[keybinds.Interact] && keys[keybinds.Super]) {
             console.log("SUPER");
+            //play a special sound for super
             if (currentMenu.name === "Buy-items") {
                 let itemInst = shopDirectory[this.reference].items[currentMenu.curIndex];
                 if (itemInst.cost.amount <= playerData.currency[itemInst.cost.currency]) {
                     if (playerData.items.length+1 <= player_limits.INVENTORY_LIMIT) {
-                        //add to inv
                         playerData.items.push(itemInst.itemName);
-                    } else if (playerData.items.length+1 > player_limits.INVENTORY_LIMIT && playerData.items.length+1 <= player_limits.STORAGE_LIMIT) {
-                        //add to storage
+                        playerData.currency[itemInst.cost.currency]-=itemInst.cost.amount;
+                        availableAssets.sounds.cashRegister.play();
+                    } else if (playerData.items.length+1 > player_limits.INVENTORY_LIMIT && playerData.itemStorage.length+1 <= player_limits.STORAGE_LIMIT) {
+                        console.log("added to storage!")
+                        console.log(playerData);
                         playerData.itemStorage.push(itemInst.itemName);
-                    }
-                }
+                        playerData.currency[itemInst.cost.currency]-=itemInst.cost.amount;
+                        availableAssets.sounds.cashRegister.play();
+                    } else {availableAssets.sounds["OO_Miss"].play({volume:1.5});}
+                } else {availableAssets.sounds["OO_Miss"].play({volume:1.5});}
             }
         } else if (keypress[keybinds.Interact]) {
+            availableAssets.sounds.OO_Click.play();
             if (currentMenu.name === "main") {
                 if (currentMenu.curIndex <= 1) {
                     this.menuStack.push({
@@ -80,7 +86,7 @@ export let shopHandler = {
             } else if (currentMenu.name === "Buy-items") {
                 //check for player currency if they can afford it, and them add it to their inventory if plausible (and if they have the space for it)
                 //find if the shopkeeper has a price for it
-                this.menuStack.push({name:"Confirm",curIndex: 0,maxIndex:1});
+                this.menuStack.push({name:"Confirm",curIndex: 0,maxIndex:0});
             } else if (currentMenu.name === "Confirm") {
                 let prevMenu = this.menuStack[this.menuStack.length - 2];
 
@@ -103,21 +109,13 @@ export let shopHandler = {
                 }
             }
         } else if (keypress[keybinds.Left] || keypress[keybinds.Up]) {
-            availableAssets.sounds.navigation.play();
-            if (currentMenu.curIndex -1 >= 0) {currentMenu.curIndex--;}
+            if (currentMenu.curIndex -1 >= 0) {currentMenu.curIndex--;availableAssets.sounds.navigation.play();}
         } else if (keypress[keybinds.Right] || keypress[keybinds.Down]) {
-            availableAssets.sounds.navigation.play();
-            if (currentMenu.curIndex +1 <= currentMenu.maxIndex) {currentMenu.curIndex++;}
+            if (currentMenu.curIndex +1 <= currentMenu.maxIndex) {currentMenu.curIndex++;availableAssets.sounds.navigation.play();}
         } else if (keypress[keybinds.MenuBack]) {
-            availableAssets.sounds.back.play();
-            //return to parent block, but if null, do nothing
-            if (this.menuStack.length > 1) {
-                this.menuStack.pop();
-            }
+            if (this.menuStack.length > 1) {availableAssets.sounds.back.play();this.menuStack.pop();}
         }
-
-
-
+        
     },
 
     draw() {
@@ -179,8 +177,9 @@ export let shopHandler = {
                     let item = itemDirectory[ shopDirectory[this.reference].items[prevMenu.curIndex].itemName ];
                     newImage("itemImage",1090,140,200,200,availableAssets.images[item.image]).draw();
                     newFilledText("BuyText",1300,170,"rgb(255,255,255)","30px JetBrains Mono ExtraBold","Buy This Item?").draw();
-                    newFilledText("ItemNameText",1300,230,"rgb(255,255,255)","50px JetBrains Mono ExtraBold",shopDirectory[this.reference].items[prevMenu.curIndex].itemName).draw();
-                    newFilledWrappedText("descr",1090,380,760,"rgb(255,255,255)","50px JetBrains Mono ExtraBold",item.description,50).draw();
+                    newFilledText("ItemNameText",1300,230,"rgb(255,255,255)","50px JetBrains Mono ExtraBold",shopDirectory[this.reference].items[prevMenu.curIndex].name).draw();
+                    newFilledText("ItemNameCost",1300,290,"rgb(255,255,255)","50px JetBrains Mono ExtraBold","$"+shopDirectory[this.reference].items[prevMenu.curIndex].cost.amount).draw();
+                    newFilledWrappedText("descriptionItem",1090,380,760,"rgb(255,255,255)","50px JetBrains Mono ExtraBold",item.description,50).draw();
                 }
             }
 
