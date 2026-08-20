@@ -422,6 +422,8 @@ export function newFilledWrappedText(id, x, y, maxWidth, color = "rgb(255,255,25
                 [-w,  w], [0,  w], [w,  w],
             ];
 
+            s.lineHeight = s.Font.split("px")[0];
+
             // outline pass — every line, every offset direction
             ctx.fillStyle = s.OutlineColor;
             lines.forEach((line, i) => {

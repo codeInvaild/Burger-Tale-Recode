@@ -1,10 +1,10 @@
-import {newRect, newFilledText, newImage, newRotatedRect} from "./Utility.js";
+import {newRect, newFilledText, newImage, newRotatedRect, newFilledWrappedText} from "./Utility.js";
 import {dialogue} from "./dialogueClass.js";
-import {keyPresses as keypress, keybinds} from "./KeyboardInputHandler.js";
+import {keyPresses as keypress, keybinds, keys, keyPresses} from "./KeyboardInputHandler.js";
 import {availableAssets, playMusic} from "./AssetLoader.js";
 import {shopDirectory} from "./shopDirectory.js";
 import {changeGameState} from "./main.js";
-import {playerController, playerData} from "./PlayerController.js";
+import {player_limits, playerController, playerData} from "./PlayerController.js";
 import {itemDirectory} from "./ItemDirectory.js";
 
 let interactionOptions= ["Buy","Sell","Talk","Exit"]
@@ -17,8 +17,24 @@ export let shopHandler = {
 
     update(deltaTime) {
         // if (!this.active){return}
-        let currentMenu = this.menuStack[this.menuStack.length-1];
-        if (keypress[keybinds.Interact]) {
+        let currentMenu = this.menuStack[this.menuStack.length - 1];
+
+
+        if (keyPresses[keybinds.Interact] && keys[keybinds.Super]) {
+            console.log("SUPER");
+            if (currentMenu.name === "Buy-items") {
+                let itemInst = shopDirectory[this.reference].items[currentMenu.curIndex];
+                if (itemInst.cost.amount <= playerData.currency[itemInst.cost.currency]) {
+                    if (playerData.items.length+1 <= player_limits.INVENTORY_LIMIT) {
+                        //add to inv
+                        playerData.items.push(itemInst.itemName);
+                    } else if (playerData.items.length+1 > player_limits.INVENTORY_LIMIT && playerData.items.length+1 <= player_limits.STORAGE_LIMIT) {
+                        //add to storage
+                        playerData.itemStorage.push(itemInst.itemName);
+                    }
+                }
+            }
+        } else if (keypress[keybinds.Interact]) {
             if (currentMenu.name === "main") {
                 if (currentMenu.curIndex <= 1) {
                     this.menuStack.push({
@@ -36,17 +52,55 @@ export let shopHandler = {
                 }
             } else if (currentMenu.name === "Type") {
 
-                if (currentMenu.curIndex ===0 && currentMenu.desiredType === "Buy") {//items buy
-                    this.menuStack.push({name:currentMenu.desiredType+"-items",curIndex: 0,maxIndex: shopDirectory[this.reference].items.length-1});
-                } else if (currentMenu.curIndex ===1 && currentMenu.desiredType === "Buy") {//gears buy
-                    this.menuStack.push({name:currentMenu.desiredType+"-gears",curIndex: 0,maxIndex: shopDirectory[this.reference].gears.length-1});
-                } else if (currentMenu.curIndex ===0 && currentMenu.desiredType === "Sell") {//items sell
-                    this.menuStack.push({name:currentMenu.desiredType+"-items",curIndex: 0,maxIndex: playerData.items.length-1});
-                } else if (currentMenu.curIndex ===1 && currentMenu.desiredType === "Sell") {//gear sell
-                    this.menuStack.push({name:currentMenu.desiredType+"-gears",curIndex: 0,maxIndex: playerData.gears.length-1});
+                if (currentMenu.curIndex === 0 && currentMenu.desiredType === "Buy") {//items buy
+                    this.menuStack.push({
+                        name: currentMenu.desiredType + "-items",
+                        curIndex: 0,
+                        maxIndex: shopDirectory[this.reference].items.length - 1,
+                    });
+                } else if (currentMenu.curIndex === 1 && currentMenu.desiredType === "Buy") {//gears buy
+                    this.menuStack.push({
+                        name: currentMenu.desiredType + "-gears",
+                        curIndex: 0,
+                        maxIndex: shopDirectory[this.reference].gears.length - 1,
+                    });
+                } else if (currentMenu.curIndex === 0 && currentMenu.desiredType === "Sell") {//items sell
+                    this.menuStack.push({
+                        name: currentMenu.desiredType + "-items",
+                        curIndex: 0,
+                        maxIndex: playerData.items.length - 1,
+                    });
+                } else if (currentMenu.curIndex === 1 && currentMenu.desiredType === "Sell") {//gear sell
+                    this.menuStack.push({
+                        name: currentMenu.desiredType + "-gears",
+                        curIndex: 0,
+                        maxIndex: playerData.gears.length - 1,
+                    });
                 }
-            }  else if (currentMenu.name === "Buy-items") {
+            } else if (currentMenu.name === "Buy-items") {
                 //check for player currency if they can afford it, and them add it to their inventory if plausible (and if they have the space for it)
+                //find if the shopkeeper has a price for it
+                this.menuStack.push({name:"Confirm",curIndex: 0,maxIndex:1});
+            } else if (currentMenu.name === "Confirm") {
+                let prevMenu = this.menuStack[this.menuStack.length - 2];
+
+                console.log("prevMenu"+ prevMenu.name);
+                if (prevMenu.name === "Buy-items") {
+                    let itemInst = shopDirectory[this.reference].items[currentMenu.curIndex];
+                    if (itemInst.cost.amount <= playerData.currency[itemInst.cost.currency]) {
+                        if (playerData.items.length+1 <= player_limits.INVENTORY_LIMIT) {
+                            playerData.items.push(itemInst.itemName);
+                            playerData.currency[itemInst.cost.currency]-=itemInst.cost.amount;
+                            availableAssets.sounds.cashRegister.play();
+                        } else if (playerData.items.length+1 > player_limits.INVENTORY_LIMIT && playerData.itemStorage.length+1 <= player_limits.STORAGE_LIMIT) {
+                            console.log("added to storage!")
+                            console.log(playerData);
+                            playerData.itemStorage.push(itemInst.itemName);
+                            playerData.currency[itemInst.cost.currency]-=itemInst.cost.amount;
+                            availableAssets.sounds.cashRegister.play();
+                        } else {availableAssets.sounds["OO_Miss"].play({volume:1.5});}
+                    } else {availableAssets.sounds["OO_Miss"].play({volume:1.5});}
+                }
             }
         } else if (keypress[keybinds.Left] || keypress[keybinds.Up]) {
             availableAssets.sounds.navigation.play();
@@ -61,6 +115,9 @@ export let shopHandler = {
                 this.menuStack.pop();
             }
         }
+
+
+
     },
 
     draw() {
@@ -114,6 +171,19 @@ export let shopHandler = {
                 newFilledText("cost",1090 + (195 * (i%4)) + 10,140 + (Math.floor(i/4) * 195) + 160,"rgb(255,255,255)","25px JetBrains Mono ExtraBold","$"+shopDirectory[this.reference].items[i].cost.amount).draw();
 
             }
+        } else if (currentMenu.name === "Confirm") {
+            let prevMenu = this.menuStack[this.menuStack.length - 2];
+            let menuSplit = prevMenu.name.split("-");
+            if (menuSplit[0] === "Buy") {
+                if (menuSplit[1] === "items") {
+                    let item = itemDirectory[ shopDirectory[this.reference].items[prevMenu.curIndex].itemName ];
+                    newImage("itemImage",1090,140,200,200,availableAssets.images[item.image]).draw();
+                    newFilledText("BuyText",1300,170,"rgb(255,255,255)","30px JetBrains Mono ExtraBold","Buy This Item?").draw();
+                    newFilledText("ItemNameText",1300,230,"rgb(255,255,255)","50px JetBrains Mono ExtraBold",shopDirectory[this.reference].items[prevMenu.curIndex].itemName).draw();
+                    newFilledWrappedText("descr",1090,380,760,"rgb(255,255,255)","50px JetBrains Mono ExtraBold",item.description,50).draw();
+                }
+            }
+
         }
 
 

@@ -20,7 +20,7 @@ export let keybinds = {
     Right: "KeyD",
     Interact : "KeyE",//universal
     Attack: "KeyF",
-    Sprint: "ShiftLeft",
+    Super: "ShiftLeft",
     //In-battle events
     MenuBack : "KeyX",
     Action: "Space", //used for dodging AND attacking

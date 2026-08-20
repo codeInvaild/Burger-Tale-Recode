@@ -189,7 +189,7 @@ export let world = {
 
 
     update(deltaTime) {//we are updating player position within the world and telling the player what they can interact with
-        playMusic(world.locations[location].Music,{fadeSeconds:2,loop:true});
+        playMusic(world.locations[location].Music,{volume:0.8,fadeSeconds:2,loop:true});
 
 
 

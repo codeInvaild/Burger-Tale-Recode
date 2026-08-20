@@ -10,6 +10,7 @@ import {changeGameState} from "./main.js";
 import {shopDirectory} from "./shopDirectory.js";
 import {dialogueDirectory} from "./dialogueDirectory.js";
 import {allyDirectory} from "./AllyDirectory.js";
+import {availableAssets} from "./AssetLoader.js";
 
 export let playerController = {//this handles the player within the world and moving them with the desired keybinds
     image : "cobalt",
@@ -98,10 +99,11 @@ export let playerController = {//this handles the player within the world and mo
 
         }
 
-        if (keys[keybinds.Sprint] && this.sprintDebounce === false ) {
+        if (keys[keybinds.Super] && this.sprintDebounce === false ) {
             this.speed = this.sprintSpeed;
             this.sprintDebounce = true;
             this.sprintTimerAccumulation = 0;
+            availableAssets.sounds.dash.play();
         } else {this.speed = 80;}
 
         if (this.sprintDebounce) {this.sprintTimerAccumulation += dt;}
@@ -171,6 +173,12 @@ export let playerSettings= {
     preloadWorldDepth : 1,
 }
 
+export let player_limits = {
+    INVENTORY_LIMIT:10,
+    STORAGE_LIMIT:30,
+    GEAR_LIMIT:25,
+}
+
 export let playerData = { //This handles all necessary player data
     location : "",
     internalData : {
@@ -179,12 +187,6 @@ export let playerData = { //This handles all necessary player data
         nihilism:true,
     },
     items : [
-        "sugar_apple",
-        "sugar_apple",
-        "cornball",
-        "sugar_apple",
-        "sugar_apple",
-        "cornball",
         "sugar_apple",
         "sugar_apple",
         "cornball",
@@ -199,7 +201,7 @@ export let playerData = { //This handles all necessary player data
     },
     playerTeam:["Cobalt","Illumine"],
     currency:{
-        Copper:0,
+        Copper:100,
         Gold:1,
     }
 };

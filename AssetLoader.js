@@ -82,6 +82,8 @@ export const assets = {
         NFL_Intro:"Assets/sounds/NFL_Intro_short.mp3",
         nutella:"Assets/sounds/nutella.mp3",
         mrbeast_cringe:"Assets/sounds/MrBeastAutotuneCringe.mp3",
+        cashRegister:"Assets/sounds/cashRegister.mp3",
+        dash:"Assets/sounds/dash.wav",
     },
     fonts: {
         "JetBrains Mono ExtraBold": "Assets/fonts/JetBrainsMono-ExtraBold.ttf",
