@@ -444,6 +444,6 @@ export let world = {
 }
 
 let size =100;
-for (let i = 0; i<50; i++){
+for (let i = 0; i<500; i++){
     world.locations[location].Areas.push({id : "tree"+i, image:"tree2",imageData : {x:(Math.random()*1600) - (size/2),y:(Math.random()*1600) - (size/2),width:size,height:size},color:[1,2,3]});
 }
